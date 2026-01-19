@@ -15,7 +15,7 @@ Visual feedback for Claude Code sessions — terminal background colors change b
 ### Step 1: Clone the plugin
 
 ```bash
-git clone https://github.com/audric/terminal-feedback ~/.claude/plugins/terminal-feedback
+git clone https://github.com/aserador/terminal-feedback ~/.claude/plugins/terminal-feedback
 ```
 
 ### Step 2: Install terminal-notifier
