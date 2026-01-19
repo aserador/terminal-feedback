@@ -220,6 +220,23 @@ rm -rf ~/.claude/plugins/terminal-feedback
 
 ---
 
+## Development
+
+If you're working on this plugin, use the development alias to load it directly from source:
+
+```bash
+claude-dev  #RECOMMENDED: I would set an alias for: claude --plugin-dir ~/.claude/plugins/ghostty-terminal-feedback
+```
+
+This bypasses caching so edits take effect immediately on restart.
+
+To release changes to normal `claude` sessions:
+1. Bump version in `.claude-plugin/plugin.json`
+2. Update version in `~/.claude/local-marketplace/.claude-plugin/marketplace.json`
+3. Run `claude plugin marketplace update local`
+
+---
+
 ## License
 
 MIT
