@@ -6,10 +6,9 @@ Visual feedback for Claude Code sessions — terminal background colors change b
 
 | State | Background | Notification |
 |-------|------------|--------------|
-| **Working** | 🔵 Blue (`#1a2a3d`) | — |
-| **Needs input** | 🟠 Amber (`#3d2a1a`) | "Claude needs input" |
-| **Task completed** | 🟢 Green (`#1a3d2a`) | "Task completed" |
-| **You respond** | ⬛ Default | — |
+| **Needs input** | Amber (`#3d2a1a`) | "Claude needs input" |
+| **Task completed** | Green (`#1a3d2a`) | "Task completed" |
+| **You respond** | Default | — |
 
 ## Quick Install (< 2 min)
 
@@ -82,7 +81,7 @@ TERMINAL_BUNDLE_ID="com.googlecode.iterm2"
 ```
 
 <details>
-<summary>🔍 How to find any terminal's bundle ID</summary>
+<summary>How to find any terminal's bundle ID</summary>
 
 ```bash
 osascript -e 'id of app "YourTerminalName"'
@@ -98,12 +97,12 @@ osascript -e 'id of app "iTerm"'
 
 | Terminal | Background Colors | Focus Detection | Status |
 |----------|:-----------------:|:---------------:|--------|
-| Ghostty | ✅ | ✅ | Full support |
-| iTerm2 | ✅ | ✅ | Full support |
-| Kitty | ✅ | ✅ | Full support |
-| Alacritty | ✅ | ✅ | Full support |
-| WezTerm | ✅ | ✅ | Full support |
-| Terminal.app | ❌ | ❌ | Not supported |
+| Ghostty | Yes | Yes | Full support |
+| iTerm2 | Yes | Yes | Full support |
+| Kitty | Yes | Yes | Full support |
+| Alacritty | Yes | Yes | Full support |
+| WezTerm | Yes | Yes | Full support |
+| Terminal.app | No | No | Not supported |
 
 **Technical requirements:**
 - OSC 11/111 escape sequences (background colors)
@@ -120,7 +119,6 @@ All options in `config.local.sh`:
 TERMINAL_BUNDLE_ID="com.mitchellh.ghostty"
 
 # Background colors (hex)
-WORKING_BG="#1a2a3d"     # Blue when Claude is working
 ATTENTION_BG="#3d2a1a"   # Amber when Claude needs input
 COMPLETED_BG="#1a3d2a"   # Green when task completed
 
@@ -182,10 +180,8 @@ The plugin uses Claude Code hooks:
 | Hook Event | What Happens |
 |------------|--------------|
 | `SessionStart` | Registers your terminal session (TTY) |
-| `PreToolUse` | Sets blue background when Claude executes tools |
 | `Notification` | Sets amber background + sends notification |
 | `Stop` | Sets green background + sends notification (if task completed) |
-| `UserPromptSubmit` | Resets background to default |
 
 The shell integration (`claude-focus-handler.zsh`) uses DECSET 1004 to detect when you switch to the tab, resetting the background automatically.
 
@@ -201,10 +197,8 @@ terminal-feedback/
 │   └── hooks.json               # Hook event bindings
 ├── hooks-handlers/
 │   ├── register-session.sh      # SessionStart
-│   ├── pre-tool-use.sh          # PreToolUse (working indicator)
 │   ├── claude-notification.sh   # Notification
-│   ├── claude-completed.sh      # Stop
-│   └── claude-reset-bg.sh       # UserPromptSubmit
+│   └── claude-completed.sh      # Stop
 ├── shell/
 │   └── claude-focus-handler.zsh # Focus detection
 ├── config.sh                    # Default config

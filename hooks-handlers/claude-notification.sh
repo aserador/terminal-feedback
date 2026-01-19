@@ -40,6 +40,24 @@ fi
 
 echo "$(date): [notification] TTY_PATH=$TTY_PATH TAB_NAME=$TAB_NAME TYPE=$NOTIFICATION_TYPE" >> "$LOG_FILE"
 
+# Stop any running flasher
+if [ -n "$TTY_NAME" ]; then
+    WORKING_MARKER="/tmp/claude-working-${TTY_NAME//\//-}"
+    FLASHER_PID_FILE="/tmp/claude-flasher-${TTY_NAME//\//-}.pid"
+
+    # Remove marker to stop flasher loop
+    rm -f "$WORKING_MARKER"
+
+    # Kill flasher process
+    if [ -f "$FLASHER_PID_FILE" ]; then
+        FLASHER_PID=$(cat "$FLASHER_PID_FILE" 2>/dev/null)
+        if [ -n "$FLASHER_PID" ]; then
+            kill "$FLASHER_PID" 2>/dev/null
+        fi
+        rm -f "$FLASHER_PID_FILE"
+    fi
+fi
+
 # Change terminal background using OSC 11 escape sequence
 if [ -n "$TTY_PATH" ] && [ -w "$TTY_PATH" ]; then
     printf '\033]11;%s\033\\' "$ATTENTION_BG" > "$TTY_PATH"

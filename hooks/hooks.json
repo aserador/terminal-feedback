@@ -1,18 +1,6 @@
 {
-  "description": "Terminal visual feedback hooks - background colors and notifications",
+  "description": "Terminal visual feedback hooks - background colors and notifications for attention and completion states",
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit|Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/pre-tool-use.sh",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [
@@ -51,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/claude-reset-bg.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/user-prompt-submit.sh",
             "timeout": 5
           }
         ]

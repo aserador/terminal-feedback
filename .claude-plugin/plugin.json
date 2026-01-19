@@ -1,19 +1,9 @@
 {
-  "name": "terminal-feedback",
-  "version": "2.0.0",
-  "description": "Visual terminal feedback for Claude Code sessions. Changes terminal background colors and sends macOS notifications based on Claude's state (working, needs input, completed). Works with any terminal supporting OSC 11/111 escape sequences.",
-  "author": "audric",
-  "platforms": ["darwin"],
-  "dependencies": {
-    "tools": ["terminal-notifier"]
+  "name": "ghostty-terminal-feedback",
+  "version": "3.0.0",
+  "description": "Visual terminal feedback for Claude Code sessions. Changes terminal background colors and sends macOS notifications when Claude needs input or completes a task. Works with any terminal supporting OSC 11/111 escape sequences.",
+  "author": {
+    "name": "audric"
   },
-  "supported_terminals": [
-    "Ghostty",
-    "iTerm2",
-    "Kitty",
-    "Alacritty",
-    "WezTerm",
-    "Hyper"
-  ],
-  "notes": "Terminal.app has limited support (no focus detection). Configure your terminal in config.local.sh"
+  "hooks": "./hooks/hooks.json"
 }

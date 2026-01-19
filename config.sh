@@ -22,9 +22,6 @@ TERMINAL_BUNDLE_ID="${TERMINAL_BUNDLE_ID:-com.mitchellh.ghostty}"
 # Colors are specified as hex values
 # These work with terminals that support OSC 11 escape sequences
 
-# Color when Claude is working (executing tools)
-WORKING_BG="${WORKING_BG:-#1a2a3d}"
-
 # Color when Claude needs your input (permission, question, idle)
 ATTENTION_BG="${ATTENTION_BG:-#3d2a1a}"
 
