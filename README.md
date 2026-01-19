@@ -6,6 +6,7 @@ Visual feedback for Claude Code sessions — terminal background colors change b
 
 | State | Background | Notification |
 |-------|------------|--------------|
+| **Working** | 🔵 Blue (`#1a2a3d`) | — |
 | **Needs input** | 🟠 Amber (`#3d2a1a`) | "Claude needs input" |
 | **Task completed** | 🟢 Green (`#1a3d2a`) | "Task completed" |
 | **You respond** | ⬛ Default | — |
@@ -119,6 +120,7 @@ All options in `config.local.sh`:
 TERMINAL_BUNDLE_ID="com.mitchellh.ghostty"
 
 # Background colors (hex)
+WORKING_BG="#1a2a3d"     # Blue when Claude is working
 ATTENTION_BG="#3d2a1a"   # Amber when Claude needs input
 COMPLETED_BG="#1a3d2a"   # Green when task completed
 
@@ -180,6 +182,7 @@ The plugin uses Claude Code hooks:
 | Hook Event | What Happens |
 |------------|--------------|
 | `SessionStart` | Registers your terminal session (TTY) |
+| `PreToolUse` | Sets blue background when Claude executes tools |
 | `Notification` | Sets amber background + sends notification |
 | `Stop` | Sets green background + sends notification (if task completed) |
 | `UserPromptSubmit` | Resets background to default |
@@ -198,6 +201,7 @@ terminal-feedback/
 │   └── hooks.json               # Hook event bindings
 ├── hooks-handlers/
 │   ├── register-session.sh      # SessionStart
+│   ├── pre-tool-use.sh          # PreToolUse (working indicator)
 │   ├── claude-notification.sh   # Notification
 │   ├── claude-completed.sh      # Stop
 │   └── claude-reset-bg.sh       # UserPromptSubmit

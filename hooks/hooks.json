@@ -1,6 +1,18 @@
 {
-  "description": "Terminal visual feedback hooks for Ghostty - background colors and notifications",
+  "description": "Terminal visual feedback hooks - background colors and notifications",
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/pre-tool-use.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
