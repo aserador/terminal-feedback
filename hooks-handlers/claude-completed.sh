@@ -105,7 +105,7 @@ if [ "$DISABLE_NOTIFICATIONS" != "true" ] && [ -x "$TERMINAL_NOTIFIER" ]; then
         -title "Claude Code - $TAB_NAME"
         -message "Task completed"
         -sound default
-        -activate "$TERMINAL_BUNDLE_ID"
+        -execute "osascript -e 'tell application id \"$TERMINAL_BUNDLE_ID\" to activate'"
     )
 
     # Add ignoreDnD flag unless user wants to respect DND

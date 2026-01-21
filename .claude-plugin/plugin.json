@@ -1,9 +1,8 @@
 {
   "name": "ghostty-terminal-feedback",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Visual terminal feedback for Claude Code sessions. Changes terminal background colors and sends macOS notifications when Claude needs input or completes a task. Works with any terminal supporting OSC 11/111 escape sequences.",
   "author": {
     "name": "audric"
-  },
-  "hooks": "./hooks/hooks.json"
+  }
 }

@@ -80,7 +80,7 @@ if [ "$DISABLE_NOTIFICATIONS" != "true" ] && [ -x "$TERMINAL_NOTIFIER" ]; then
         -title "$TITLE"
         -message "$MESSAGE"
         -sound default
-        -activate "$TERMINAL_BUNDLE_ID"
+        -execute "osascript -e 'tell application id \"$TERMINAL_BUNDLE_ID\" to activate'"
     )
 
     # Add ignoreDnD flag unless user wants to respect DND

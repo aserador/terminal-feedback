@@ -15,7 +15,7 @@ Visual feedback for Claude Code sessions — terminal background colors change b
 ### Step 1: Clone the plugin
 
 ```bash
-git clone https://github.com/aserador/terminal-feedback ~/.claude/plugins/terminal-feedback
+git clone https://github.com/aserador/terminal-feedback ~/.claude/plugins/ghostty-terminal-feedback
 ```
 
 ### Step 2: Install terminal-notifier
@@ -31,7 +31,7 @@ Edit `~/.claude/settings.json` and add `terminal-feedback` to your enabled plugi
 ```json
 {
   "enabledPlugins": {
-    "terminal-feedback": true
+    "ghostty-terminal-feedback": true
   }
 }
 ```
@@ -41,7 +41,7 @@ Edit `~/.claude/settings.json` and add `terminal-feedback` to your enabled plugi
 Add this line to your `~/.zshrc`:
 
 ```bash
-source ~/.claude/plugins/terminal-feedback/shell/claude-focus-handler.zsh
+source ~/.claude/plugins/ghostty-terminal-feedback/shell/claude-focus-handler.zsh
 ```
 
 Then reload your shell:
@@ -61,8 +61,8 @@ Start a new Claude Code session. The plugin works out of the box with **Ghostty*
 The default config is for Ghostty. For other terminals, create a local config:
 
 ```bash
-cp ~/.claude/plugins/terminal-feedback/config.sh \
-   ~/.claude/plugins/terminal-feedback/config.local.sh
+cp ~/.claude/plugins/ghostty-terminal-feedback/config.sh \
+   ~/.claude/plugins/ghostty-terminal-feedback/config.local.sh
 ```
 
 Edit `config.local.sh` and change the terminal bundle ID:
@@ -168,7 +168,7 @@ tail -f /tmp/claude-hook.log
 ### Scripts not running?
 
 ```bash
-chmod +x ~/.claude/plugins/terminal-feedback/hooks-handlers/*.sh
+chmod +x ~/.claude/plugins/ghostty-terminal-feedback/hooks-handlers/*.sh
 ```
 
 ---
@@ -190,7 +190,7 @@ The shell integration (`claude-focus-handler.zsh`) uses DECSET 1004 to detect wh
 ## File Structure
 
 ```
-terminal-feedback/
+ghostty-terminal-feedback/
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin metadata
 ├── hooks/
@@ -212,7 +212,7 @@ terminal-feedback/
 
 ```bash
 # Remove the plugin
-rm -rf ~/.claude/plugins/terminal-feedback
+rm -rf ~/.claude/plugins/ghostty-terminal-feedback
 
 # Remove from ~/.claude/settings.json
 # Remove the source line from ~/.zshrc
