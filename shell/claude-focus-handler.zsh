@@ -13,15 +13,6 @@
 [[ -o interactive ]] || return
 [[ -t 0 ]] || return
 
-# Enable focus reporting (terminal sends ESC[I on focus-in, ESC[O on focus-out)
-printf '\033[?1004h'
-
-# Disable focus reporting when shell exits
-_claude_cleanup_focus() {
-    printf '\033[?1004l'
-}
-trap '_claude_cleanup_focus' EXIT
-
 # Function to handle focus-in event
 _claude_on_focus_in() {
     local tty_name=$(tty 2>/dev/null | sed 's/\/dev\///')
@@ -68,3 +59,17 @@ function _claude_focus_out_widget() {
 }
 zle -N _claude_focus_out_widget
 bindkey '\e[O' _claude_focus_out_widget
+
+# IMPORTANT: Enable focus reporting AFTER setting up bindkeys
+# This prevents race condition where focus events arrive before handlers are ready
+# Only enable if this is the initial shell load (not a re-source)
+if [[ -z "$_CLAUDE_FOCUS_HANDLER_LOADED" ]]; then
+    export _CLAUDE_FOCUS_HANDLER_LOADED=1
+    printf '\033[?1004h'
+fi
+
+# Disable focus reporting when shell exits
+_claude_cleanup_focus() {
+    printf '\033[?1004l'
+}
+trap '_claude_cleanup_focus' EXIT

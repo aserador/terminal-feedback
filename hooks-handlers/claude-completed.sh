@@ -36,12 +36,6 @@ if [ -f "$TRANSCRIPT_PATH" ]; then
     # Check if it contains AskUserQuestion tool use
     if echo "$LAST_ASSISTANT" | grep -q '"name":"AskUserQuestion"'; then
         NEEDS_INPUT=true
-    # Check if it's waiting for permission (tool use that requires approval)
-    elif echo "$LAST_ASSISTANT" | grep -q '"type":"tool_use"'; then
-        NEEDS_INPUT=true
-    # Check if the text content ends with a question
-    elif echo "$LAST_ASSISTANT" | grep -qE '\?["\s]*$'; then
-        NEEDS_INPUT=true
     fi
 fi
 
