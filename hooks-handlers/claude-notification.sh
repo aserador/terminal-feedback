@@ -16,9 +16,9 @@ INPUT=$(cat)
 echo "$(date): [notification] Hook fired" >> "$LOG_FILE"
 
 # Extract fields from JSON
-SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
-MESSAGE=$(echo "$INPUT" | grep -o '"message":"[^"]*"' | cut -d'"' -f4)
-NOTIFICATION_TYPE=$(echo "$INPUT" | grep -o '"notification_type":"[^"]*"' | cut -d'"' -f4)
+SESSION_ID=$(echo "$INPUT" | grep -oE '"session_id"\s*:\s*"[^"]*"' | cut -d'"' -f4)
+MESSAGE=$(echo "$INPUT" | grep -oE '"message"\s*:\s*"[^"]*"' | cut -d'"' -f4)
+NOTIFICATION_TYPE=$(echo "$INPUT" | grep -oE '"notification_type"\s*:\s*"[^"]*"' | cut -d'"' -f4)
 
 # Check if we have the necessary info
 if [ -z "$SESSION_ID" ]; then
@@ -36,6 +36,20 @@ TAB_NAME="Claude"
 if [ -f "$LOCATION_FILE" ]; then
     source "$LOCATION_FILE"
     TAB_NAME="${TAB_NAME:-Claude}"
+fi
+
+# Fallback: if no location file, find TTY from process tree
+if [ -z "$TTY_PATH" ] || [ ! -w "$TTY_PATH" ]; then
+    CURRENT_PID=$$
+    while [ "$CURRENT_PID" != "1" ] && [ -n "$CURRENT_PID" ]; do
+        FOUND_TTY=$(ps -o tty= -p $CURRENT_PID 2>/dev/null | tr -d ' ')
+        if [ -n "$FOUND_TTY" ] && [ "$FOUND_TTY" != "??" ]; then
+            TTY_NAME="$FOUND_TTY"
+            TTY_PATH="/dev/$FOUND_TTY"
+            break
+        fi
+        CURRENT_PID=$(ps -o ppid= -p $CURRENT_PID 2>/dev/null | tr -d ' ')
+    done
 fi
 
 echo "$(date): [notification] TTY_PATH=$TTY_PATH TAB_NAME=$TAB_NAME TYPE=$NOTIFICATION_TYPE" >> "$LOG_FILE"

@@ -16,9 +16,9 @@ INPUT=$(cat)
 
 echo "$(date): [completed] Hook fired" >> "$LOG_FILE"
 
-# Extract session_id and transcript_path from JSON
-SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
-TRANSCRIPT_PATH=$(echo "$INPUT" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4)
+# Extract session_id and transcript_path from JSON (space-tolerant)
+SESSION_ID=$(echo "$INPUT" | grep -oE '"session_id"\s*:\s*"[^"]*"' | cut -d'"' -f4)
+TRANSCRIPT_PATH=$(echo "$INPUT" | grep -oE '"transcript_path"\s*:\s*"[^"]*"' | cut -d'"' -f4)
 
 # Check if we have the necessary info
 if [ -z "$SESSION_ID" ] || [ -z "$TRANSCRIPT_PATH" ]; then
@@ -57,6 +57,20 @@ TAB_NAME="Claude"
 if [ -f "$LOCATION_FILE" ]; then
     source "$LOCATION_FILE"
     TAB_NAME="${TAB_NAME:-Claude}"
+fi
+
+# Fallback: if no location file (e.g., subagent session), find TTY from process tree
+if [ -z "$TTY_PATH" ] || [ ! -w "$TTY_PATH" ]; then
+    CURRENT_PID=$$
+    while [ "$CURRENT_PID" != "1" ] && [ -n "$CURRENT_PID" ]; do
+        FOUND_TTY=$(ps -o tty= -p $CURRENT_PID 2>/dev/null | tr -d ' ')
+        if [ -n "$FOUND_TTY" ] && [ "$FOUND_TTY" != "??" ]; then
+            TTY_NAME="$FOUND_TTY"
+            TTY_PATH="/dev/$FOUND_TTY"
+            break
+        fi
+        CURRENT_PID=$(ps -o ppid= -p $CURRENT_PID 2>/dev/null | tr -d ' ')
+    done
 fi
 
 echo "$(date): [completed] TTY_PATH=$TTY_PATH TAB_NAME=$TAB_NAME" >> "$LOG_FILE"

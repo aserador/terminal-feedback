@@ -14,7 +14,7 @@ source "$PLUGIN_ROOT/config.sh"
 INPUT=$(cat)
 
 # Get session_id from hook input
-SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
+SESSION_ID=$(echo "$INPUT" | grep -oE '"session_id"\s*:\s*"[^"]*"' | cut -d'"' -f4)
 
 if [ -z "$SESSION_ID" ]; then
     exit 0
@@ -43,7 +43,7 @@ find_tty() {
 TTY_NAME=$(find_tty)
 
 # Get the working directory from the hook input for tab identification
-CWD=$(echo "$INPUT" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4)
+CWD=$(echo "$INPUT" | grep -oE '"cwd"\s*:\s*"[^"]*"' | cut -d'"' -f4)
 TAB_NAME=$(basename "$CWD" 2>/dev/null || echo "claude")
 
 # Write session info

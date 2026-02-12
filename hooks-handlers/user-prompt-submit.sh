@@ -16,7 +16,7 @@ INPUT=$(cat)
 echo "$(date): [user-prompt] Hook fired" >> "$LOG_FILE"
 
 # Extract session_id from JSON
-SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
+SESSION_ID=$(echo "$INPUT" | grep -oE '"session_id"\s*:\s*"[^"]*"' | cut -d'"' -f4)
 
 if [ -z "$SESSION_ID" ]; then
     echo "$(date): [user-prompt] Missing session_id" >> "$LOG_FILE"
