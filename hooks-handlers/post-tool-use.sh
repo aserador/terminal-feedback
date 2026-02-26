@@ -53,4 +53,6 @@ if [ -n "$TTY_NAME" ]; then
     fi
 fi
 
+# Return valid JSON so Claude Code treats the hook as successful
+echo '{"suppressOutput":true}'
 exit 0

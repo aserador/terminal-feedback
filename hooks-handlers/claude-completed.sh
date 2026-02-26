@@ -136,3 +136,6 @@ fi
 
 # Note: We rely solely on the shell's focus handler (claude-focus-handler.zsh)
 # which uses DECSET 1004 for terminal-level focus detection.
+
+# Return valid JSON so Claude Code treats the hook as successful
+echo '{"suppressOutput":true}'

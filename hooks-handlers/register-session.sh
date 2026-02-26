@@ -56,3 +56,6 @@ REGISTERED_AT="$(date)"
 EOF
 
 echo "$(date): [session] Registered session $SESSION_ID (TTY: $TTY_NAME, Tab: $TAB_NAME)" >> "$LOG_FILE"
+
+# Return valid JSON so Claude Code treats the hook as successful
+echo '{"suppressOutput":true}'
