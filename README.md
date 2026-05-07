@@ -175,13 +175,25 @@ chmod +x ~/.claude/plugins/ghostty-terminal-feedback/hooks-handlers/*.sh
 
 ## How It Works
 
-The plugin uses Claude Code hooks:
+The plugin runs a small state machine per terminal (`/tmp/claude-state-<tty>`) and only changes the background when the transition is valid. This prevents the green/brown flicker that happens when several hooks fire in quick succession.
+
+```
+SessionStart ──► idle
+UserPromptSubmit ──► working   (default bg)
+Notification ──► attention     (amber)
+Stop ──► completed             (green) — but only if not already in attention
+SubagentStop ──► no-op         (parent is still working)
+SessionEnd ──► clears state
+```
 
 | Hook Event | What Happens |
 |------------|--------------|
-| `SessionStart` | Registers your terminal session (TTY) |
-| `Notification` | Sets amber background + sends notification |
-| `Stop` | Sets green background + sends notification (if task completed) |
+| `SessionStart` | Registers your terminal session (TTY) and seeds state=`idle` |
+| `UserPromptSubmit` | Resets bg, sets state=`working` |
+| `Notification` | Sets amber bg, sets state=`attention`, sends macOS notification |
+| `Stop` | If state ≠ `attention`, sets green bg and notifies. Otherwise leaves the brown waiting indicator alone |
+| `SubagentStop` | No-op — prevents green flashes when a subagent finishes mid-turn |
+| `SessionEnd` | Clears per-session and per-TTY state files |
 
 The shell integration (`claude-focus-handler.zsh`) uses DECSET 1004 to detect when you switch to the tab, resetting the background automatically.
 
@@ -196,11 +208,17 @@ ghostty-terminal-feedback/
 ├── hooks/
 │   └── hooks.json               # Hook event bindings
 ├── hooks-handlers/
+│   ├── _lib.sh                  # Shared: jq parsing, TTY discovery, state machine
 │   ├── register-session.sh      # SessionStart
+│   ├── session-end.sh           # SessionEnd
 │   ├── claude-notification.sh   # Notification
-│   └── claude-completed.sh      # Stop
+│   ├── claude-completed.sh      # Stop
+│   ├── subagent-stop.sh         # SubagentStop (no-op)
+│   └── user-prompt-submit.sh    # UserPromptSubmit
 ├── shell/
 │   └── claude-focus-handler.zsh # Focus detection
+├── tests/
+│   └── smoke.sh                 # Run before publishing changes
 ├── config.sh                    # Default config
 ├── config.local.sh              # Your overrides (gitignored)
 └── README.md
@@ -229,6 +247,12 @@ claude-dev  #RECOMMENDED: I would set an alias for: claude --plugin-dir ~/.claud
 ```
 
 This bypasses caching so edits take effect immediately on restart.
+
+Run smoke tests before publishing:
+
+```bash
+./tests/smoke.sh
+```
 
 To release changes to normal `claude` sessions:
 1. Bump version in `.claude-plugin/plugin.json`

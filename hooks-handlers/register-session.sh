@@ -1,61 +1,44 @@
 #!/bin/bash
-# Called when Claude Code session starts
-# Captures the TTY for this terminal session
+# SessionStart: capture the controlling TTY for this Claude Code session
+# so other handlers can target the right terminal. Fires for every source
+# (startup, resume, clear, compact) so a /resume in a different tab refreshes
+# the mapping.
 
-# Determine plugin root from script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
+# shellcheck source=_lib.sh
+source "$SCRIPT_DIR/_lib.sh"
+hook_bootstrap "$SCRIPT_DIR"
 
-# Load configuration
-source "$PLUGIN_ROOT/config.sh"
-[[ -f "$PLUGIN_ROOT/config.local.sh" ]] && source "$PLUGIN_ROOT/config.local.sh"
+SESSION_ID=$(json_field "$HOOK_INPUT" session_id)
+SOURCE=$(json_field "$HOOK_INPUT" source)
+CWD=$(json_field "$HOOK_INPUT" cwd)
 
-# Read hook input JSON from stdin
-INPUT=$(cat)
-
-# Get session_id from hook input
-SESSION_ID=$(echo "$INPUT" | grep -oE '"session_id"\s*:\s*"[^"]*"' | cut -d'"' -f4)
-
-if [ -z "$SESSION_ID" ]; then
+if [[ -z "$SESSION_ID" ]]; then
+    log session "missing session_id, exiting"
+    echo '{"suppressOutput":true}'
     exit 0
 fi
 
-# Create location file directory
 mkdir -p "$HOME/.claude/session-locations"
-
 LOCATION_FILE="$HOME/.claude/session-locations/$SESSION_ID"
 
-# Find the TTY by walking up the process tree
-# The Claude CLI process has the TTY, but hook subprocesses don't
-find_tty() {
-    local CURRENT_PID=$$
-    while [ "$CURRENT_PID" != "1" ] && [ -n "$CURRENT_PID" ]; do
-        local TTY=$(ps -o tty= -p $CURRENT_PID 2>/dev/null | tr -d ' ')
-        if [ -n "$TTY" ] && [ "$TTY" != "??" ]; then
-            echo "$TTY"
-            return 0
-        fi
-        CURRENT_PID=$(ps -o ppid= -p $CURRENT_PID 2>/dev/null | tr -d ' ')
-    done
-    echo ""
-}
-
-TTY_NAME=$(find_tty)
-
-# Get the working directory from the hook input for tab identification
-CWD=$(echo "$INPUT" | grep -oE '"cwd"\s*:\s*"[^"]*"' | cut -d'"' -f4)
+TTY_NAME=$(discover_tty)
+TTY_PATH="${CLAUDE_HOOKS_FORCE_TTY_PATH:-/dev/$TTY_NAME}"
 TAB_NAME=$(basename "$CWD" 2>/dev/null || echo "claude")
 
-# Write session info
 cat > "$LOCATION_FILE" << EOF
 TTY_NAME="$TTY_NAME"
-TTY_PATH="/dev/$TTY_NAME"
+TTY_PATH="$TTY_PATH"
 TAB_NAME="$TAB_NAME"
 CWD="$CWD"
 REGISTERED_AT="$(date)"
 EOF
 
-echo "$(date): [session] Registered session $SESSION_ID (TTY: $TTY_NAME, Tab: $TAB_NAME)" >> "$LOG_FILE"
+# Fresh session = idle background. Clear any stale state from a prior
+# session that happened to land on this same TTY.
+state_write "$TTY_NAME" "idle"
+clear_pending_reset "$TTY_NAME"
 
-# Return valid JSON so Claude Code treats the hook as successful
+log session "registered $SESSION_ID source=$SOURCE tty=$TTY_NAME tab=$TAB_NAME"
+
 echo '{"suppressOutput":true}'

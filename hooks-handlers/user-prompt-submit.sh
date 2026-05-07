@@ -1,58 +1,30 @@
 #!/bin/bash
-# Called when user submits a prompt to Claude
-# Resets terminal background to default since user is now active
+# UserPromptSubmit: user just typed a new prompt — clear any leftover
+# completion/attention bg and reset to idle. Falls back to process-tree
+# TTY discovery if the registered TTY is stale (e.g. session was resumed
+# in a different tab).
 
-# Determine plugin root from script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
+# shellcheck source=_lib.sh
+source "$SCRIPT_DIR/_lib.sh"
+hook_bootstrap "$SCRIPT_DIR"
 
-# Load configuration
-source "$PLUGIN_ROOT/config.sh"
-[[ -f "$PLUGIN_ROOT/config.local.sh" ]] && source "$PLUGIN_ROOT/config.local.sh"
+SESSION_ID=$(json_field "$HOOK_INPUT" session_id)
 
-# Read hook input JSON from stdin
-INPUT=$(cat)
-
-echo "$(date): [user-prompt] Hook fired" >> "$LOG_FILE"
-
-# Extract session_id from JSON
-SESSION_ID=$(echo "$INPUT" | grep -oE '"session_id"\s*:\s*"[^"]*"' | cut -d'"' -f4)
-
-if [ -z "$SESSION_ID" ]; then
-    echo "$(date): [user-prompt] Missing session_id" >> "$LOG_FILE"
+if [[ -z "$SESSION_ID" ]]; then
+    log user-prompt "missing session_id"
+    echo '{"suppressOutput":true}'
     exit 0
 fi
 
-# Get session location info (TTY)
-LOCATION_FILE="$HOME/.claude/session-locations/$SESSION_ID"
+resolve_tty "$SESSION_ID"
+TTY_NAME="$RESOLVED_TTY_NAME"
+TTY_PATH="$RESOLVED_TTY_PATH"
 
-TTY_PATH=""
-TTY_NAME=""
+log user-prompt "fired session=$SESSION_ID tty=$TTY_NAME"
 
-if [ -f "$LOCATION_FILE" ]; then
-    source "$LOCATION_FILE"
-fi
+reset_bg "$TTY_PATH"
+state_write "$TTY_NAME" "working"
+clear_pending_reset "$TTY_NAME"
 
-echo "$(date): [user-prompt] TTY_PATH=$TTY_PATH TTY_NAME=$TTY_NAME" >> "$LOG_FILE"
-
-# Reset terminal background to default using OSC 111
-if [ -n "$TTY_PATH" ] && [ -w "$TTY_PATH" ]; then
-    printf '\033]111\033\\' > "$TTY_PATH"
-    echo "$(date): [user-prompt] Reset background to default on $TTY_PATH" >> "$LOG_FILE"
-else
-    echo "$(date): [user-prompt] Cannot write to TTY: $TTY_PATH" >> "$LOG_FILE"
-fi
-
-# Clean up any pending reset markers
-if [ -n "$TTY_NAME" ]; then
-    PENDING_FILE="/tmp/claude-pending-reset-${TTY_NAME//\//-}"
-    if [ -f "$PENDING_FILE" ]; then
-        rm -f "$PENDING_FILE"
-        rm -f "${PENDING_FILE}.session"
-        echo "$(date): [user-prompt] Cleaned up pending reset marker" >> "$LOG_FILE"
-    fi
-fi
-
-# Return valid JSON so Claude Code treats the hook as successful
 echo '{"suppressOutput":true}'
-exit 0

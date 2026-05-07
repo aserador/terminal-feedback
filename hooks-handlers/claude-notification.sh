@@ -1,122 +1,36 @@
 #!/bin/bash
-# Called when Claude sends a notification (needs permission, idle, etc.)
-# The Notification hook provides message and notification_type directly
+# Notification: Claude needs the user's attention — permission request,
+# AskUserQuestion, or idle. Sets brown background and writes
+# state=attention so a subsequent Stop hook in the same turn won't
+# overwrite it with green.
 
-# Determine plugin root from script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
+# shellcheck source=_lib.sh
+source "$SCRIPT_DIR/_lib.sh"
+hook_bootstrap "$SCRIPT_DIR"
 
-# Load configuration
-source "$PLUGIN_ROOT/config.sh"
-[[ -f "$PLUGIN_ROOT/config.local.sh" ]] && source "$PLUGIN_ROOT/config.local.sh"
+SESSION_ID=$(json_field "$HOOK_INPUT" session_id)
+MESSAGE=$(json_field "$HOOK_INPUT" message)
+NOTIFICATION_TYPE=$(json_field "$HOOK_INPUT" notification_type)
 
-# Read hook input JSON from stdin
-INPUT=$(cat)
-
-echo "$(date): [notification] Hook fired" >> "$LOG_FILE"
-
-# Extract fields from JSON
-SESSION_ID=$(echo "$INPUT" | grep -oE '"session_id"\s*:\s*"[^"]*"' | cut -d'"' -f4)
-MESSAGE=$(echo "$INPUT" | grep -oE '"message"\s*:\s*"[^"]*"' | cut -d'"' -f4)
-NOTIFICATION_TYPE=$(echo "$INPUT" | grep -oE '"notification_type"\s*:\s*"[^"]*"' | cut -d'"' -f4)
-
-# Check if we have the necessary info
-if [ -z "$SESSION_ID" ]; then
-    echo "$(date): [notification] Missing session_id" >> "$LOG_FILE"
+if [[ -z "$SESSION_ID" ]]; then
+    log notification "missing session_id"
+    echo '{"suppressOutput":true}'
     exit 0
 fi
 
-# Get session location info (TTY, tab name)
-LOCATION_FILE="$HOME/.claude/session-locations/$SESSION_ID"
+resolve_tty "$SESSION_ID"
+TTY_NAME="$RESOLVED_TTY_NAME"
+TTY_PATH="$RESOLVED_TTY_PATH"
+TAB_NAME="$RESOLVED_TAB_NAME"
 
-TTY_PATH=""
-TTY_NAME=""
-TAB_NAME="Claude"
+log notification "fired session=$SESSION_ID tty=$TTY_NAME type=$NOTIFICATION_TYPE"
 
-if [ -f "$LOCATION_FILE" ]; then
-    source "$LOCATION_FILE"
-    TAB_NAME="${TAB_NAME:-Claude}"
-fi
+set_bg_color "$TTY_PATH" "$ATTENTION_BG"
+state_write "$TTY_NAME" "attention"
+ring_bell "$TTY_PATH"
+send_notification "Claude Code - $TAB_NAME" "$MESSAGE"
+mark_pending_reset "$TTY_NAME" "$SESSION_ID"
 
-# Fallback: if no location file, find TTY from process tree
-if [ -z "$TTY_PATH" ] || [ ! -w "$TTY_PATH" ]; then
-    CURRENT_PID=$$
-    while [ "$CURRENT_PID" != "1" ] && [ -n "$CURRENT_PID" ]; do
-        FOUND_TTY=$(ps -o tty= -p $CURRENT_PID 2>/dev/null | tr -d ' ')
-        if [ -n "$FOUND_TTY" ] && [ "$FOUND_TTY" != "??" ]; then
-            TTY_NAME="$FOUND_TTY"
-            TTY_PATH="/dev/$FOUND_TTY"
-            break
-        fi
-        CURRENT_PID=$(ps -o ppid= -p $CURRENT_PID 2>/dev/null | tr -d ' ')
-    done
-fi
-
-echo "$(date): [notification] TTY_PATH=$TTY_PATH TAB_NAME=$TAB_NAME TYPE=$NOTIFICATION_TYPE" >> "$LOG_FILE"
-
-# Stop any running flasher
-if [ -n "$TTY_NAME" ]; then
-    WORKING_MARKER="/tmp/claude-working-${TTY_NAME//\//-}"
-    FLASHER_PID_FILE="/tmp/claude-flasher-${TTY_NAME//\//-}.pid"
-
-    # Remove marker to stop flasher loop
-    rm -f "$WORKING_MARKER"
-
-    # Kill flasher process
-    if [ -f "$FLASHER_PID_FILE" ]; then
-        FLASHER_PID=$(cat "$FLASHER_PID_FILE" 2>/dev/null)
-        if [ -n "$FLASHER_PID" ]; then
-            kill "$FLASHER_PID" 2>/dev/null
-        fi
-        rm -f "$FLASHER_PID_FILE"
-    fi
-fi
-
-# Change terminal background using OSC 11 escape sequence
-if [ -n "$TTY_PATH" ] && [ -w "$TTY_PATH" ]; then
-    printf '\033]11;%s\033\\' "$ATTENTION_BG" > "$TTY_PATH"
-    echo "$(date): [notification] Changed background to $ATTENTION_BG on $TTY_PATH" >> "$LOG_FILE"
-else
-    echo "$(date): [notification] Cannot write to TTY: $TTY_PATH" >> "$LOG_FILE"
-fi
-
-# Build notification title based on type
-TITLE="Claude Code - $TAB_NAME"
-
-# Emit bell for dock bounce
-if [ "$DISABLE_BELL" != "true" ] && [ -n "$TTY_PATH" ] && [ -w "$TTY_PATH" ]; then
-    printf '\a' > "$TTY_PATH"
-fi
-
-# Send macOS notification
-if [ "$DISABLE_NOTIFICATIONS" != "true" ] && [ -x "$TERMINAL_NOTIFIER" ]; then
-    NOTIFIER_ARGS=(
-        -title "$TITLE"
-        -message "$MESSAGE"
-        -sound default
-        -execute "osascript -e 'tell application id \"$TERMINAL_BUNDLE_ID\" to activate'"
-    )
-
-    # Add ignoreDnD flag unless user wants to respect DND
-    if [ "$RESPECT_DND" != "true" ]; then
-        NOTIFIER_ARGS+=(-ignoreDnD)
-    fi
-
-    "$TERMINAL_NOTIFIER" "${NOTIFIER_ARGS[@]}"
-    echo "$(date): [notification] Notification sent: $MESSAGE" >> "$LOG_FILE"
-fi
-
-# Create pending reset marker for shell-based focus detection
-# The shell's focus handler will detect this and reset when the tab is actually focused
-if [ -n "$TTY_NAME" ]; then
-    PENDING_FILE="/tmp/claude-pending-reset-${TTY_NAME//\//-}"
-    touch "$PENDING_FILE"
-    echo "$SESSION_ID" > "${PENDING_FILE}.session"
-    echo "$(date): [notification] Created pending reset marker: $PENDING_FILE" >> "$LOG_FILE"
-fi
-
-# Note: We rely solely on the shell's focus handler (claude-focus-handler.zsh)
-# which uses DECSET 1004 for terminal-level focus detection.
-
-# Return valid JSON so Claude Code treats the hook as successful
+log notification "set bg=$ATTENTION_BG on $TTY_PATH ($MESSAGE)"
 echo '{"suppressOutput":true}'
