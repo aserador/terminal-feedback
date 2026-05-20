@@ -9,9 +9,9 @@
     {
       "name": "ghostty-terminal-feedback",
       "source": "./",
-      "description": "Changes terminal background colors and sends macOS notifications when Claude needs input or completes a task. Works with any terminal supporting OSC 11/111 escape sequences.",
+      "description": "Visual terminal feedback for Claude Code sessions. In Ghostty/iTerm2/Kitty/etc. it changes the terminal background via OSC 11 and sends macOS notifications. Inside cmux it colors the workspace tab and routes notifications through the cmux panel. Switches automatically based on CMUX_PANEL_ID.",
       "category": "productivity",
-      "version": "3.2.0",
+      "version": "3.3.0",
       "homepage": "https://github.com/aserador/terminal-feedback"
     }
   ]

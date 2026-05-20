@@ -21,10 +21,15 @@ resolve_tty "$SESSION_ID"
 TTY_NAME="$RESOLVED_TTY_NAME"
 TTY_PATH="$RESOLVED_TTY_PATH"
 
-log user-prompt "fired session=$SESSION_ID tty=$TTY_NAME"
+log user-prompt "fired session=$SESSION_ID tty=$TTY_NAME cmux=$(in_cmux && echo 1 || echo 0)"
 
-reset_bg "$TTY_PATH"
 state_write "$TTY_NAME" "working"
-clear_pending_reset "$TTY_NAME"
+
+if in_cmux; then
+    cmux_clear_color
+else
+    reset_bg "$TTY_PATH"
+    clear_pending_reset "$TTY_NAME"
+fi
 
 echo '{"suppressOutput":true}'

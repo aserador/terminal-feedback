@@ -134,6 +134,38 @@ reset_bg() {
     printf '\033]111\033\\' > "$tty_path"
 }
 
+# cmux integration -----------------------------------------------------------
+# cmux (cmux.com) embeds Ghostty but swallows OSC 11/111, so set_bg_color is
+# invisible inside a cmux pane. Instead, cmux exposes a CLI we can use to
+# color the workspace tab in its sidebar and to route notifications through
+# its own panel. The env vars below are set by cmux for every pane.
+
+in_cmux() {
+    [[ -n "${CMUX_PANEL_ID:-}" || -n "${CMUX_SURFACE_ID:-}" || -n "${CMUX_WORKSPACE_ID:-}" ]]
+}
+
+# Color the current cmux workspace tab. Accepts a named color
+# (Amber, Green, Red, etc.) or a #RRGGBB hex.
+cmux_set_color() {
+    local color="$1"
+    [[ -z "$color" ]] && return 1
+    command -v cmux >/dev/null 2>&1 || return 1
+    cmux workspace-action --action set-color --color "$color" >/dev/null 2>&1
+}
+
+cmux_clear_color() {
+    command -v cmux >/dev/null 2>&1 || return 1
+    cmux workspace-action --action clear-color >/dev/null 2>&1
+}
+
+# Send a notification through cmux's panel (also fires a macOS banner).
+cmux_notify() {
+    local title="$1"
+    local body="$2"
+    command -v cmux >/dev/null 2>&1 || return 1
+    cmux notify --title "$title" --body "$body" >/dev/null 2>&1
+}
+
 # Emit terminal bell for dock bounce / OS attention attractor.
 ring_bell() {
     local tty_path="$1"

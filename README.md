@@ -99,14 +99,40 @@ osascript -e 'id of app "iTerm"'
 
 ## Terminal Compatibility
 
-| Terminal | Background Colors | Focus Detection | Status |
-|----------|:-----------------:|:---------------:|--------|
-| Ghostty | Yes | Yes | Full support |
-| iTerm2 | Yes | Yes | Full support |
-| Kitty | Yes | Yes | Full support |
-| Alacritty | Yes | Yes | Full support |
-| WezTerm | Yes | Yes | Full support |
-| Terminal.app | No | No | Not supported |
+| Terminal | Mechanism | Background / Tab | Focus Detection | Status |
+|----------|-----------|:----------------:|:---------------:|--------|
+| Ghostty | OSC 11/111 | Yes | Yes | Full support |
+| iTerm2 | OSC 11/111 | Yes | Yes | Full support |
+| Kitty | OSC 11/111 | Yes | Yes | Full support |
+| Alacritty | OSC 11/111 | Yes | Yes | Full support |
+| WezTerm | OSC 11/111 | Yes | Yes | Full support |
+| **cmux** | `cmux` CLI | Workspace tab color | n/a | Full support |
+| Terminal.app | — | No | No | Not supported |
+
+## cmux integration
+
+cmux embeds Ghostty but swallows OSC 11, so terminal background colors are
+invisible inside a cmux pane. When the plugin detects `CMUX_PANEL_ID` in the
+environment, it switches its mechanism:
+
+| Hook | Outside cmux | Inside cmux |
+|------|--------------|-------------|
+| Notification (needs input) | OSC 11 brown bg + terminal-notifier + bell | `cmux workspace-action --color Amber` + `cmux notify` |
+| Stop (task completed) | OSC 11 green bg + terminal-notifier + bell | `cmux workspace-action --color Green` + `cmux notify` |
+| UserPromptSubmit (new turn) | OSC 111 reset | `cmux workspace-action --action clear-color` |
+
+The workspace tab in cmux's sidebar lights up Amber/Green instead of changing
+the pane background, which cmux can't render. `cmux notify` puts the message
+in cmux's notification panel and triggers a single macOS banner; the plugin
+skips `terminal-notifier` in cmux mode to avoid duplicate banners.
+
+Configure cmux behavior in `config.local.sh`:
+
+```bash
+CMUX_ATTENTION_COLOR="Amber"   # named color or #RRGGBB hex
+CMUX_COMPLETED_COLOR="Green"
+USE_CMUX_NOTIFY="true"          # "false" to skip cmux notifications
+```
 
 **Technical requirements:**
 - OSC 11/111 escape sequences (background colors)
@@ -144,7 +170,17 @@ LOG_FILE="/tmp/claude-hook.log"
 
 ### Background not changing?
 
-Test if your terminal supports OSC 11:
+First check whether you're inside cmux:
+
+```bash
+echo "$CMUX_PANEL_ID"   # if non-empty, you're in cmux
+```
+
+If you are, the plugin uses `cmux workspace-action --color` instead — look for
+the workspace tab color in cmux's sidebar, not the pane background. See
+[cmux integration](#cmux-integration).
+
+If you're outside cmux, test if your terminal honors OSC 11:
 
 ```bash
 # Should turn background red

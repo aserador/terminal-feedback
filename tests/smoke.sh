@@ -31,6 +31,11 @@ export DISABLE_NOTIFICATIONS=true
 export DISABLE_BELL=true
 export LOG_FILE="$TMPDIR_TEST/hook.log"
 
+# Tests 1-9 assert OSC writes — make sure no leaked cmux env vars from the
+# host shell push the handlers into cmux mode. Test 10 re-exports the cmux
+# vars itself when it needs them.
+unset CMUX_PANEL_ID CMUX_SURFACE_ID CMUX_WORKSPACE_ID
+
 # Stand up a fake TTY (regular file). The lib's TTY discovery and resolution
 # both honor these env vars so handlers write to our fixture instead of the
 # real controlling terminal of the test runner.
@@ -174,6 +179,77 @@ echo "working" > "$state_file"
 out=$(run_hook claude-notification.sh "$(input_json '"message":"Allow Bash command: \"echo hi\"?","notification_type":"permission"')")
 assert "Notification handles escaped quotes" "$out" '{"suppressOutput":true}'
 assert "state -> attention even with escaped quotes" "$(cat "$state_file")" "attention"
+
+echo
+echo "== Test 10: cmux mode skips OSC writes and calls cmux CLI =="
+# Stub `cmux` on PATH so we can capture invocations without needing the
+# real cmux app installed. The stub appends its args to a log file.
+CMUX_STUB_DIR="$TMPDIR_TEST/bin"
+CMUX_STUB_LOG="$TMPDIR_TEST/cmux-calls.log"
+mkdir -p "$CMUX_STUB_DIR"
+cat > "$CMUX_STUB_DIR/cmux" << 'STUB'
+#!/bin/bash
+printf '%s\n' "$*" >> "$CMUX_STUB_LOG"
+exit 0
+STUB
+chmod +x "$CMUX_STUB_DIR/cmux"
+export PATH="$CMUX_STUB_DIR:$PATH"
+export CMUX_STUB_LOG
+# Toggle cmux mode via the env vars the handlers check
+export CMUX_PANEL_ID="smoketest-panel-id"
+export CMUX_WORKSPACE_ID="smoketest-workspace-id"
+> "$CMUX_STUB_LOG"
+
+# --- Notification in cmux ---
+cleanup_state
+> "$FAKE_TTY_PATH"
+out=$(run_hook claude-notification.sh "$(input_json '"message":"Permission needed","notification_type":"permission"')")
+assert "Notification (cmux) exits 0 with JSON ack" "$out" '{"suppressOutput":true}'
+assert "Notification (cmux) state -> attention" "$(cat "$state_file")" "attention"
+assert "Notification (cmux) does NOT write OSC" "$(cat "$FAKE_TTY_PATH")" ""
+assert_contains "Notification (cmux) calls workspace-action set-color Amber" "$(cat "$CMUX_STUB_LOG")" "workspace-action --action set-color --color Amber"
+assert_contains "Notification (cmux) calls cmux notify" "$(cat "$CMUX_STUB_LOG")" "notify --title"
+
+# --- Stop in cmux while state=working ---
+> "$CMUX_STUB_LOG"
+> "$FAKE_TTY_PATH"
+echo "working" > "$state_file"
+out=$(run_hook claude-completed.sh "$(input_json)")
+assert "Stop (cmux, working) exits 0" "$out" '{"suppressOutput":true}'
+assert "Stop (cmux, working) state -> completed" "$(cat "$state_file")" "completed"
+assert "Stop (cmux) does NOT write OSC" "$(cat "$FAKE_TTY_PATH")" ""
+assert_contains "Stop (cmux) calls workspace-action set-color Green" "$(cat "$CMUX_STUB_LOG")" "workspace-action --action set-color --color Green"
+
+# --- Stop in cmux while state=attention is still a no-op ---
+> "$CMUX_STUB_LOG"
+echo "attention" > "$state_file"
+out=$(run_hook claude-completed.sh "$(input_json)")
+assert "Stop (cmux, attention) exits 0" "$out" '{"suppressOutput":true}'
+assert "Stop (cmux, attention) state stays attention" "$(cat "$state_file")" "attention"
+assert "Stop (cmux, attention) calls no cmux CLI" "$(cat "$CMUX_STUB_LOG")" ""
+
+# --- UserPromptSubmit in cmux clears the color ---
+> "$CMUX_STUB_LOG"
+> "$FAKE_TTY_PATH"
+out=$(run_hook user-prompt-submit.sh "$(input_json)")
+assert "UserPromptSubmit (cmux) exits 0" "$out" '{"suppressOutput":true}'
+assert "UserPromptSubmit (cmux) state -> working" "$(cat "$state_file")" "working"
+assert "UserPromptSubmit (cmux) does NOT write OSC" "$(cat "$FAKE_TTY_PATH")" ""
+assert_contains "UserPromptSubmit (cmux) calls clear-color" "$(cat "$CMUX_STUB_LOG")" "workspace-action --action clear-color"
+
+# --- USE_CMUX_NOTIFY=false suppresses cmux notify but still sets color ---
+> "$CMUX_STUB_LOG"
+cleanup_state
+export USE_CMUX_NOTIFY=false
+out=$(run_hook claude-notification.sh "$(input_json '"message":"hi","notification_type":"permission"')")
+unset USE_CMUX_NOTIFY
+assert "USE_CMUX_NOTIFY=false: handler still acks" "$out" '{"suppressOutput":true}'
+assert_contains "USE_CMUX_NOTIFY=false still sets color" "$(cat "$CMUX_STUB_LOG")" "workspace-action --action set-color"
+[[ ! "$(cat "$CMUX_STUB_LOG")" == *"notify --title"* ]] && \
+    { PASS=$((PASS+1)); echo "  ok   USE_CMUX_NOTIFY=false skips cmux notify"; } || \
+    { FAIL=$((FAIL+1)); echo "  FAIL USE_CMUX_NOTIFY=false should skip notify"; FAILED_TESTS+=("USE_CMUX_NOTIFY=false leaked notify call"); }
+
+unset CMUX_PANEL_ID CMUX_WORKSPACE_ID
 
 echo
 echo "============================================"

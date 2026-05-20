@@ -24,13 +24,20 @@ TTY_NAME="$RESOLVED_TTY_NAME"
 TTY_PATH="$RESOLVED_TTY_PATH"
 TAB_NAME="$RESOLVED_TAB_NAME"
 
-log notification "fired session=$SESSION_ID tty=$TTY_NAME type=$NOTIFICATION_TYPE"
+log notification "fired session=$SESSION_ID tty=$TTY_NAME type=$NOTIFICATION_TYPE cmux=$(in_cmux && echo 1 || echo 0)"
 
-set_bg_color "$TTY_PATH" "$ATTENTION_BG"
 state_write "$TTY_NAME" "attention"
-ring_bell "$TTY_PATH"
-send_notification "Claude Code - $TAB_NAME" "$MESSAGE"
-mark_pending_reset "$TTY_NAME" "$SESSION_ID"
 
-log notification "set bg=$ATTENTION_BG on $TTY_PATH ($MESSAGE)"
+if in_cmux; then
+    cmux_set_color "$CMUX_ATTENTION_COLOR"
+    [[ "$USE_CMUX_NOTIFY" == "true" ]] && cmux_notify "Claude Code - $TAB_NAME" "$MESSAGE"
+    log notification "cmux set-color=$CMUX_ATTENTION_COLOR ($MESSAGE)"
+else
+    set_bg_color "$TTY_PATH" "$ATTENTION_BG"
+    ring_bell "$TTY_PATH"
+    send_notification "Claude Code - $TAB_NAME" "$MESSAGE"
+    mark_pending_reset "$TTY_NAME" "$SESSION_ID"
+    log notification "set bg=$ATTENTION_BG on $TTY_PATH ($MESSAGE)"
+fi
+
 echo '{"suppressOutput":true}'

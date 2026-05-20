@@ -44,6 +44,26 @@ DISABLE_BELL="${DISABLE_BELL:-false}"
 RESPECT_DND="${RESPECT_DND:-false}"
 
 # =============================================================================
+# CMUX INTEGRATION
+# =============================================================================
+# When the plugin detects it's running inside a cmux pane (CMUX_PANEL_ID set),
+# OSC 11/111 is skipped (cmux swallows it) and we drive cmux's CLI instead:
+# `cmux workspace-action --color` for the tab indicator and `cmux notify`
+# for notifications. terminal-notifier is also skipped to avoid duplicate
+# macOS banners (cmux notify already triggers one).
+
+# Workspace tab color when Claude needs input. Accepts a named color
+# (Red, Crimson, Orange, Amber, Olive, Green, Teal, Aqua, Blue, Navy,
+# Indigo, Purple, Magenta, Rose, Brown, Charcoal) or a #RRGGBB hex.
+CMUX_ATTENTION_COLOR="${CMUX_ATTENTION_COLOR:-Amber}"
+
+# Workspace tab color when Claude completes a task.
+CMUX_COMPLETED_COLOR="${CMUX_COMPLETED_COLOR:-Green}"
+
+# Set to "false" to skip `cmux notify` even inside cmux (tab color still applies)
+USE_CMUX_NOTIFY="${USE_CMUX_NOTIFY:-true}"
+
+# =============================================================================
 # LOGGING
 # =============================================================================
 # Log file location (set to /dev/null to disable logging)
