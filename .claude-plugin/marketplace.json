@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "terminal-feedback",
+  "description": "Single-plugin marketplace for ghostty-terminal-feedback — visual terminal feedback for Claude Code sessions",
+  "owner": {
+    "name": "audric"
+  },
+  "plugins": [
+    {
+      "name": "ghostty-terminal-feedback",
+      "source": "./",
+      "description": "Changes terminal background colors and sends macOS notifications when Claude needs input or completes a task. Works with any terminal supporting OSC 11/111 escape sequences.",
+      "category": "productivity",
+      "version": "3.2.0",
+      "homepage": "https://github.com/aserador/terminal-feedback"
+    }
+  ]
+}

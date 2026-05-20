@@ -12,36 +12,40 @@ Visual feedback for Claude Code sessions — terminal background colors change b
 
 ## Quick Install (< 2 min)
 
-### Step 1: Clone the plugin
-
-```bash
-git clone https://github.com/aserador/terminal-feedback ~/.claude/plugins/ghostty-terminal-feedback
-```
-
-### Step 2: Install terminal-notifier
+### Step 1: Install terminal-notifier
 
 ```bash
 brew install terminal-notifier
 ```
 
-### Step 3: Enable the plugin
+### Step 2: Add the marketplace and install
 
-Edit `~/.claude/settings.json` and add `terminal-feedback` to your enabled plugins:
+In Claude Code:
 
-```json
-{
-  "enabledPlugins": {
-    "ghostty-terminal-feedback": true
-  }
-}
+```
+/plugin marketplace add aserador/terminal-feedback
+/plugin install ghostty-terminal-feedback@terminal-feedback
 ```
 
-### Step 4: Add shell integration
-
-Add this line to your `~/.zshrc`:
+Or from the shell:
 
 ```bash
-source ~/.claude/plugins/ghostty-terminal-feedback/shell/claude-focus-handler.zsh
+claude plugin marketplace add aserador/terminal-feedback
+claude plugin install ghostty-terminal-feedback@terminal-feedback
+```
+
+### Step 3: Add shell integration
+
+The plugin gets installed into a versioned cache directory (`~/.claude/plugins/cache/terminal-feedback/ghostty-terminal-feedback/<version>/`). Add this auto-resolving snippet to your `~/.zshrc` so the focus handler keeps working across plugin updates:
+
+```bash
+# Terminal-feedback focus handler — auto-resolves to the latest installed version
+__tf_root="$HOME/.claude/plugins/cache/terminal-feedback/ghostty-terminal-feedback"
+if [[ -d "$__tf_root" ]]; then
+  __tf_handler=$(ls -td "$__tf_root"/*/shell/claude-focus-handler.zsh 2>/dev/null | head -1)
+  [[ -n "$__tf_handler" ]] && source "$__tf_handler"
+fi
+unset __tf_root __tf_handler 2>/dev/null
 ```
 
 Then reload your shell:
@@ -50,7 +54,7 @@ Then reload your shell:
 source ~/.zshrc
 ```
 
-### Step 5: Done!
+### Step 4: Done!
 
 Start a new Claude Code session. The plugin works out of the box with **Ghostty**.
 
@@ -229,24 +233,24 @@ ghostty-terminal-feedback/
 ## Uninstall
 
 ```bash
-# Remove the plugin
-rm -rf ~/.claude/plugins/ghostty-terminal-feedback
+claude plugin uninstall ghostty-terminal-feedback
+claude plugin marketplace remove terminal-feedback
 
-# Remove from ~/.claude/settings.json
-# Remove the source line from ~/.zshrc
+# Then remove the focus-handler snippet from ~/.zshrc
 ```
 
 ---
 
 ## Development
 
-If you're working on this plugin, use the development alias to load it directly from source:
+If you're working on this plugin, clone it locally and load it directly from source:
 
 ```bash
-claude-dev  #RECOMMENDED: I would set an alias for: claude --plugin-dir ~/.claude/plugins/ghostty-terminal-feedback
+git clone https://github.com/aserador/terminal-feedback ~/src/terminal-feedback
+alias claude-dev='claude --plugin-dir ~/src/terminal-feedback'
 ```
 
-This bypasses caching so edits take effect immediately on restart.
+`--plugin-dir` bypasses the marketplace cache so edits take effect immediately on restart.
 
 Run smoke tests before publishing:
 
@@ -254,10 +258,10 @@ Run smoke tests before publishing:
 ./tests/smoke.sh
 ```
 
-To release changes to normal `claude` sessions:
-1. Bump version in `.claude-plugin/plugin.json`
-2. Update version in `~/.claude/local-marketplace/.claude-plugin/marketplace.json`
-3. Run `claude plugin marketplace update local`
+To release changes:
+1. Bump `version` in `.claude-plugin/plugin.json` AND `.claude-plugin/marketplace.json`
+2. Commit and push to `main`
+3. Users get the new version on the next `claude plugin marketplace update terminal-feedback`
 
 ---
 
